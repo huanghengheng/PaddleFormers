@@ -28,6 +28,37 @@ CONFIG_PATH = "./examples/config/dpo"
 LOG_PATH = "./model_unittest_logs"
 OUTPUT_DIR = tempfile.TemporaryDirectory().name
 MODEL_NAME_OR_PATH = "./models/tiny-random-qwen3"
+# MAX_SEQ_LEN = 2048
+# WARMUP_STEPS = -1
+MAX_STEPS = 5
+SAVE_STEPS = 3
+
+DPO_TRAIN_DATASET_PATH = "./tests/fixtures/dummy/ernie/dpo-train.jsonl"
+DPO_EVAL_DATASET_PATH = "./tests/fixtures/dummy/ernie/dpo-train.jsonl"
+
+DPO_FC_TRAIN_DATASET_PATH = "./tests/fixtures/dummy/ernie/dpo-train.jsonl"
+DPO_FC_EVAL_DATASET_PATH = "./tests/fixtures/dummy/ernie/dpo-train.jsonl"
+
+DPO_FULL_EXCEPTED_LOSS = 0.692086
+DPO_FULL_REUSME_EXCEPTED_LOSS = 0.691044
+DPO_FULL_EXPECTED_RESULT = [[22407, 90612, 90612, 90612, 90612, 90612, 90612, 90612, 90612, 90612]]
+
+DPO_LORA_EXCEPTED_LOSS = 0.692095
+DPO_LORA_REUSME_EXCEPTED_LOSS = 0.691209
+DPO_LORA_EXPECTED_RESULT = [[22407, 120525, 77505, 113631, 47887, 134141, 122487, 61092, 40897, 40601]]
+
+DPO_FULL_TP_PP_EXCEPTED_LOSS = 0.692381
+DPO_FULL_TP_PP_REUSME_EXCEPTED_LOSS = 0.691568
+DPO_FULL_TP_PP_EXPECTED_RESULT = [[22407, 90612, 90612, 90612, 90612, 90612, 90612, 90612, 90612, 90612]]
+
+DPO_LORA_TP_PP_EXCEPTED_LOSS = 0.692254
+DPO_LORA_TP_PP_REUSME_EXCEPTED_LOSS = 0.691406
+DPO_LORA_TP_PP_EXPECTED_RESULT = [[22407, 120525, 77505, 113631, 47887, 134141, 122487, 61092, 40897, 40601]]
+
+DPO_FC_EXCEPTED_LOSS = 0.692086
+DPO_FC_REUSME_EXCEPTED_LOSS = 0.691044
+DPO_FC_EXPECTED_RESULT = [[22407, 90612, 90612, 90612, 90612, 90612, 90612, 90612, 90612, 90612]]
+
 
 os.environ["NVIDIA_TF32_OVERRIDE"] = "0"
 os.environ["NCCL_ALGO"] = "Tree"
@@ -103,10 +134,10 @@ class DPOTrainTest(unittest.TestCase):
             "train_dataset_path": "./tests/fixtures/dummy/ernie/dpo-train.jsonl",
             "eval_dataset_path": "./tests/fixtures/dummy/ernie/dpo-train.jsonl",
             "output_dir": output_dir,
-            "max_seq_len": 2048,
-            "warmup_steps": -1,
-            "max_steps": 5,
-            "save_steps": 3,
+            ##""max_seq_len": MAX_SEQ_LEN,
+            ##"warmup_steps": WARMUP_STEPS,
+            "max_steps": MAX_STEPS,
+            "save_steps": SAVE_STEPS,
         }
         config_path = os.path.join(CONFIG_PATH, "full.yaml")
         updated_config_path = self.dpotrain_tester.update_training_args(config_path, output_dir, update_args)
@@ -129,8 +160,7 @@ class DPOTrainTest(unittest.TestCase):
         self.dpotrain_tester.assert_result(training_p.returncode, training_p.stdout)
 
         # test training loss
-        EXCEPTED_LOSS = 0.692086
-        self.dpotrain_tester.assert_loss(training_p.stdout, EXCEPTED_LOSS)
+        self.dpotrain_tester.assert_loss(training_p.stdout, DPO_FULL_EXCEPTED_LOSS)
 
         # test model resume
         reusme_p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
@@ -143,11 +173,11 @@ class DPOTrainTest(unittest.TestCase):
                 dop_full_reusme_f.write(dop_full_reusme_output)
         self.dpotrain_tester.assert_result(reusme_p.returncode, reusme_p.stdout)
 
-        EXCEPTED_LOSS = 0.691044
-        self.dpotrain_tester.assert_loss(reusme_p.stdout, EXCEPTED_LOSS)
+        
+        self.dpotrain_tester.assert_loss(reusme_p.stdout, DPO_FULL_REUSME_EXCEPTED_LOSS)
 
         # test model generate
-        EXPECTED_RESULT = paddle.to_tensor([[22407, 90612, 90612, 90612, 90612, 90612, 90612, 90612, 90612, 90612]])
+        EXPECTED_RESULT = paddle.to_tensor(DPO_FULL_EXPECTED_RESULT)
         self.dpotrain_tester.create_and_check_model_generate(output_dir, EXPECTED_RESULT)
 
     def test_dpo_lora(self):
@@ -157,10 +187,10 @@ class DPOTrainTest(unittest.TestCase):
             "train_dataset_path": "./tests/fixtures/dummy/ernie/dpo-train.jsonl",
             "eval_dataset_path": "./tests/fixtures/dummy/ernie/dpo-train.jsonl",
             "output_dir": output_dir,
-            "warmup_steps": -1,
-            "max_seq_len": 2048,
-            "max_steps": 5,
-            "save_steps": 3,
+            #"warmup_steps": WARMUP_STEPS,
+            #""max_seq_len": MAX_SEQ_LEN,
+            "max_steps": MAX_STEPS,
+            "save_steps": SAVE_STEPS,
         }
         config_path = os.path.join(CONFIG_PATH, "lora.yaml")
         updated_config_path = self.dpotrain_tester.update_training_args(config_path, output_dir, update_args)
@@ -182,8 +212,7 @@ class DPOTrainTest(unittest.TestCase):
         self.dpotrain_tester.assert_result(training_p.returncode, training_p.stdout)
 
         # test training loss
-        EXCEPTED_LOSS = 0.692095
-        self.dpotrain_tester.assert_loss(training_p.stdout, EXCEPTED_LOSS)
+        self.dpotrain_tester.assert_loss(training_p.stdout, DPO_LORA_EXCEPTED_LOSS)
 
         # test model resume
         reusme_p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
@@ -196,8 +225,7 @@ class DPOTrainTest(unittest.TestCase):
                 dop_lora_reusme_f.write(dop_lora_reusme_output)
         self.dpotrain_tester.assert_result(reusme_p.returncode, reusme_p.stdout)
 
-        EXCEPTED_LOSS = 0.691209
-        self.dpotrain_tester.assert_loss(reusme_p.stdout, EXCEPTED_LOSS)
+        self.dpotrain_tester.assert_loss(reusme_p.stdout, DPO_LORA_REUSME_EXCEPTED_LOSS)
 
         # test lora  merge
         lora_merge_output_dir = os.path.join(output_dir, "export")
@@ -207,9 +235,7 @@ class DPOTrainTest(unittest.TestCase):
         self.dpotrain_tester.assert_result(lora_merge_p.returncode, lora_merge_p.stdout)
 
         # test lora_merge_model generate
-        EXPECTED_RESULT = paddle.to_tensor(
-            [[22407, 120525, 77505, 113631, 47887, 134141, 122487, 61092, 40897, 40601]]
-        )
+        EXPECTED_RESULT = paddle.to_tensor(DPO_LORA_EXPECTED_RESULT)
         self.dpotrain_tester.create_and_check_model_generate(lora_merge_output_dir, EXPECTED_RESULT)
 
     def test_dpo_full_tp_pp(self):
@@ -219,10 +245,10 @@ class DPOTrainTest(unittest.TestCase):
             "train_dataset_path": "./tests/fixtures/dummy/ernie/dpo-train.jsonl",
             "eval_dataset_path": "./tests/fixtures/dummy/ernie/dpo-train.jsonl",
             "output_dir": output_dir,
-            "max_seq_len": 2048,
-            "max_steps": 5,
-            "warmup_steps": -1,
-            "save_steps": 3,
+            ##""max_seq_len": MAX_SEQ_LEN,
+            ##"warmup_steps": WARMUP_STEPS,
+            "max_steps": MAX_STEPS,
+            "save_steps": SAVE_STEPS,
         }
         config_path = os.path.join(CONFIG_PATH, "full_tp_pp.yaml")
         updated_config_path = self.dpotrain_tester.update_training_args(config_path, output_dir, update_args)
@@ -244,8 +270,7 @@ class DPOTrainTest(unittest.TestCase):
         self.dpotrain_tester.assert_result(training_p.returncode, training_p.stdout)
 
         # test training loss
-        EXCEPTED_LOSS = 0.692381
-        self.dpotrain_tester.assert_loss(training_p.stdout, EXCEPTED_LOSS)
+        self.dpotrain_tester.assert_loss(training_p.stdout, DPO_FULL_TP_PP_EXCEPTED_LOSS)
         # test model resume
         reusme_p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         print(f"dop_full_tp_pp reusme cmd is : {cmd}")
@@ -257,11 +282,10 @@ class DPOTrainTest(unittest.TestCase):
                 dop_full_tp_pp_reusme_f.write(dop_full_tp_pp_reusme_output)
         self.dpotrain_tester.assert_result(reusme_p.returncode, reusme_p.stdout)
 
-        EXCEPTED_LOSS = 0.691568
-        self.dpotrain_tester.assert_loss(reusme_p.stdout, EXCEPTED_LOSS)
+        self.dpotrain_tester.assert_loss(reusme_p.stdout, DPO_FULL_TP_PP_REUSME_EXCEPTED_LOSS)
 
         # test model generate
-        EXPECTED_RESULT = paddle.to_tensor([[22407, 90612, 90612, 90612, 90612, 90612, 90612, 90612, 90612, 90612]])
+        EXPECTED_RESULT = paddle.to_tensor(DPO_FULL_TP_PP_EXPECTED_RESULT)
         self.dpotrain_tester.create_and_check_model_generate(output_dir, EXPECTED_RESULT)
 
     def test_dpo_lora_tp_pp(self):
@@ -271,10 +295,10 @@ class DPOTrainTest(unittest.TestCase):
             "train_dataset_path": "./tests/fixtures/dummy/ernie/dpo-train.jsonl",
             "eval_dataset_path": "./tests/fixtures/dummy/ernie/dpo-train.jsonl",
             "output_dir": output_dir,
-            "max_seq_len": 2048,
-            "warmup_steps": -1,
-            "max_steps": 5,
-            "save_steps": 3,
+            ##""max_seq_len": MAX_SEQ_LEN,
+            ##"warmup_steps": WARMUP_STEPS,
+            "max_steps": MAX_STEPS,
+            "save_steps": SAVE_STEPS,
         }
         config_path = os.path.join(CONFIG_PATH, "lora_tp_pp.yaml")
         updated_config_path = self.dpotrain_tester.update_training_args(config_path, output_dir, update_args)
@@ -296,8 +320,7 @@ class DPOTrainTest(unittest.TestCase):
         self.dpotrain_tester.assert_result(training_p.returncode, training_p.stdout)
 
         # test training loss
-        EXCEPTED_LOSS = 0.692254
-        self.dpotrain_tester.assert_loss(training_p.stdout, EXCEPTED_LOSS)
+        self.dpotrain_tester.assert_loss(training_p.stdout, DPO_LORA_TP_PP_EXCEPTED_LOSS)
 
         # test model resume
         reusme_p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
@@ -310,8 +333,7 @@ class DPOTrainTest(unittest.TestCase):
                 dop_lora_tp_pp_reusme_f.write(dop_lora_tp_pp_reusme_output)
         self.dpotrain_tester.assert_result(reusme_p.returncode, reusme_p.stdout)
 
-        EXCEPTED_LOSS = 0.691406
-        self.dpotrain_tester.assert_loss(reusme_p.stdout, EXCEPTED_LOSS)
+        self.dpotrain_tester.assert_loss(reusme_p.stdout, DPO_LORA_TP_PP_REUSME_EXCEPTED_LOSS)
 
         # test lora  merge
         lora_merge_output_dir = os.path.join(output_dir, "export")
@@ -321,7 +343,5 @@ class DPOTrainTest(unittest.TestCase):
         self.dpotrain_tester.assert_result(lora_merge_p.returncode, lora_merge_p.stdout)
 
         # test lora_merge_model generate
-        EXPECTED_RESULT = paddle.to_tensor(
-            [[22407, 120525, 77505, 113631, 47887, 134141, 122487, 61092, 40897, 40601]]
-        )
+        EXPECTED_RESULT = paddle.to_tensor(DPO_LORA_TP_PP_EXPECTED_RESULT)
         self.dpotrain_tester.create_and_check_model_generate(lora_merge_output_dir, EXPECTED_RESULT)
